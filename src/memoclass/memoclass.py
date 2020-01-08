@@ -29,8 +29,8 @@ class lockmemofunc(memofunc):
     
         This can only be added to a bound method on a MemoClass
     """
-    def __init__(self, *args, clear_on_unlock=True, **kwargs):
-        super(lockmemofunc, self).__init__(*args, **kwargs)
+    def __init__(self, func, clear_on_unlock=True, **kwargs):
+        super(lockmemofunc, self).__init__(func, **kwargs)
         self._clear_on_unlock=clear_on_unlock
 
     def __call__(self, *args, **kwargs):
