@@ -12,8 +12,9 @@ jobs:
   include:
     - stage: doc
       script: 
-        - pip install sphinx
+        - pip install sphinx>=2.0
         - make html
+      - python: 3.7
       deploy:
         provider: pages
         skip_cleanup: true
