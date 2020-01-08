@@ -11,7 +11,9 @@ script:
 jobs:
   include:
     - stage: doc
-      script: make html
+      script: 
+        - pip install sphinx
+        - make html
       deploy:
         provider: pages
         skip_cleanup: true
