@@ -1,17 +1,15 @@
 from builtins import object
-from .memoize import memoclsmethod, memomethod
+from .memoize import memoclsmethod, memomethod, memofunc
 from functools import wraps
 from contextlib import contextmanager
 from future.utils import iteritems
 
-def mutating(func, mutates_base=True, mutates_cls=False):
+def mutating(func, mutates_cls=False):
     """ Signal that a method mutates its class
 
         Here, mutating means that it clears the caches on any memomethods on the
         class calling the method
 
-        :param mutates_base:
-            If True, any base class methods also have their caches cleared
         :param mutates_cls:
             If True, any class methods also have their caches cleared
     """
@@ -21,7 +19,7 @@ def mutating(func, mutates_base=True, mutates_cls=False):
             raise ValueError(
                     "Cannot call mutating method {0} on locked class {1}".format(
                         func.__name__, self) )
-        self.clear_caches(mutates_base, mutates_cls)
+        self.clear_caches(clsmethods=mutates_cls)
         return func(self, *args, **kwargs)
     return inner
 
