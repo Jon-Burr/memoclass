@@ -8,3 +8,14 @@ install:
   - pip install .
 script:
   - python -m pytest
+jobs:
+  include:
+    - stage: doc
+      script: make html
+deploy:
+  provider: pages
+  skip_cleanup: true
+  local_dir: build/html
+  github_token: $GH_REPO_TOKEN
+  on:
+    branch: master
