@@ -25,31 +25,6 @@ def mutates(func, mutates_cls=False):
         return func(self, *args, **kwargs)
     return inner
 
-class LockMemoFunc(MemoFunc):
-    """ A modified memofunc that locks the class it's called on while the method
-        is being called
-    
-        This can only be added to a bound method on a MemoClass
-    """
-    def __init__(self, func, clear_on_unlock=True, **kwargs):
-        super(LockMemoFunc, self).__init__(func, **kwargs)
-        self._clear_on_unlock=clear_on_unlock
-
-    def __call__(self, *args, **kwargs):
-        with self._wrapped_func.__self__.locked(self._clear_on_unlock):
-            return super(LockMemoFunc, self).__call__(*args, **kwargs)
-
-class LockMemoMethod(MemoMethod):
-    """ A modified memomethod that locks the class it's called on while the
-        method is being called
-
-        This can only be added to a bound method on a MemoClass
-    """
-    def __init__(self, *args, **kwargs):
-        super(LockMemoMethod, self).__init__(
-                *args, memofunc_cls=LockMemoFunc, **kwargs)
-lockmemomethod = make_decorator(LockMemoMethod)
-
 class MemoClass(object):
     """ A class with several utilities to enable interacting with memoized
         methods
@@ -59,11 +34,12 @@ class MemoClass(object):
 
         Alternatively, a MemoClass can be locked, which prevents calling any
         mutating methods. By default, locking enables caching and unlocking
-        disables and clears the caches, which allows it to temporarily create a
-        'const' object. This is useful when an object has time consuming
-        attributes to calculate but may change in ways that are difficult to
-        reset the caches on (for example, if the class calculates values based
-        on another object that it doesn't own or control).
+        disables and clears the caches *if they were disabled before*, which
+        allows it to temporarily create a 'const' object. This is useful when an
+        object has time consuming attributes to calculate but may change in ways
+        that are difficult to reset the caches on (for example, if the class
+        calculates values based on another object that it doesn't own or
+        control).
     """
 
     def __init__(self, mutable_attrs=()):
@@ -77,8 +53,10 @@ class MemoClass(object):
                 mutable
         """
         if mutable_attrs is not None:
-            mutable_attrs = set(mutable_attrs)
+            mutable_attrs = \
+                    set(mutable_attrs) | set(("_locked", "_caches_enabled"))
         self._locked = False
+        self.enable_caches()
         self._mutable_attrs = mutable_attrs
 
     @memoclsmethod
@@ -95,16 +73,20 @@ class MemoClass(object):
 
     def enable_caches(self, clsmethods=False):
         """ Enable the cache on all memomethods """
+        self._caches_enabled = True
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).enable_cache()
 
     def disable_caches(self, clsmethods=False):
         """ Disable the cache on all memomethods """
+        print("Disabling caches on {0}".format(self) )
+        self._caches_enabled = False
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).disable_cache()
 
     def clear_caches(self, clsmethods=False):
         """ Clear the cache on all memomethods """
+        print("Clearing caches on {0}".format(self) )
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).clear_cache()
 
@@ -119,8 +101,8 @@ class MemoClass(object):
             A locked class' caches are always enabled and calling a mutating
             method on it results in a ValueError
         """
-        self._locked = True
         self.enable_caches()
+        self._locked = True
 
     def unlock(self, clear_caches=True):
         """ Unlock the class
@@ -128,13 +110,14 @@ class MemoClass(object):
             :param clear_caches:
                 If True, disable the class' caches and clear them
         """
+        print("Unlocking with clear_caches == {0}".format(clear_caches) )
         self._locked = False
         if clear_caches:
             self.disable_caches()
             self.clear_caches()
 
     @contextmanager
-    def locked(self, clear_on_unlock=True):
+    def locked(self, clear_on_unlock=None):
         """ A context manager that temporarily locks the class
 
             Does nothing if the class is already locked
@@ -144,6 +127,11 @@ class MemoClass(object):
                 unlocking. The caches will only be cleared if the class was
                 unlocked before calling locked
         """
+        if clear_on_unlock is None:
+            # Clear and disable the caches when unlocking if they were disabled
+            # before
+            clear_on_unlock = not self._caches_enabled
+        print("Locking {0} with clear_on_unlock {1}. Is locked == {2}".format(self, clear_on_unlock, self.is_locked) )
         if self.is_locked:
             yield
         else:
@@ -178,5 +166,6 @@ class MemoClass(object):
                     "Cannot set attribute {0} on locked class {1}".format(
                         key, self) )
         else:
+            print("Clearing caches due to setting attribute {0}".format(key) )
             self.clear_caches()
         return super(MemoClass, self).__setattr__(key, value)

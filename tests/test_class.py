@@ -1,6 +1,6 @@
 """ Tests for MemoClass """
 
-from memoclass.memoclass import MemoClass, lockmemomethod, mutates
+from memoclass.memoclass import MemoClass, mutates
 from memoclass.memoize import memomethod
 import pytest
 
@@ -24,7 +24,7 @@ class PartialSum(MemoClass):
     def reset(cls):
         cls.__call__.clear_cache()
 
-    @lockmemomethod
+    @memomethod
     def call_twice(self, other):
         self(other)
         return self(other)
