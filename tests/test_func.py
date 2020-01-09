@@ -1,6 +1,7 @@
 """ Tests for a standalone function """
 
 from memoclass.memoize import memofunc
+import copy
 
 factorial_count = 0
 @memofunc
@@ -11,6 +12,11 @@ def factorial(n):
     if n == 0:
         return 1
     return n*factorial(n-1)
+
+@memofunc(on_return=copy.copy)
+def build_list():
+    """ Create and return a list """
+    return [1, 2, 3]
 
 def reset():
     global factorial_count
@@ -60,3 +66,9 @@ def test_rmcache():
     factorial.rm_from_cache(5)
     factorial(5)
     assert factorial_count == 7
+
+def test_onreturn():
+    """ Ensure that specifying an 'on_return' function works """
+    a = build_list()
+    b = build_list()
+    assert a is not b

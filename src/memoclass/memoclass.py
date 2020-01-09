@@ -1,13 +1,15 @@
 from builtins import object
-from .memoize import memoclsmethod, memomethod, memofunc
+from .memoize import (
+        memoclsmethod, memomethod, memofunc, MemoFunc, MemoMethod,
+        MemoClsMethod, make_decorator)
 from functools import wraps
 from contextlib import contextmanager
 from future.utils import iteritems
 
-def mutating(func, mutates_cls=False):
+def mutates(func, mutates_cls=False):
     """ Signal that a method mutates its class
 
-        Here, mutating means that it clears the caches on any memomethods on the
+        Here, mutates means that it clears the caches on any memomethods on the
         class calling the method
 
         :param mutates_cls:
@@ -23,29 +25,30 @@ def mutating(func, mutates_cls=False):
         return func(self, *args, **kwargs)
     return inner
 
-class lockmemofunc(memofunc):
+class LockMemoFunc(MemoFunc):
     """ A modified memofunc that locks the class it's called on while the method
         is being called
     
         This can only be added to a bound method on a MemoClass
     """
     def __init__(self, func, clear_on_unlock=True, **kwargs):
-        super(lockmemofunc, self).__init__(func, **kwargs)
+        super(LockMemoFunc, self).__init__(func, **kwargs)
         self._clear_on_unlock=clear_on_unlock
 
     def __call__(self, *args, **kwargs):
         with self._wrapped_func.__self__.locked(self._clear_on_unlock):
-            return super(lockmemofunc, self).__call__(*args, **kwargs)
+            return super(LockMemoFunc, self).__call__(*args, **kwargs)
 
-class lockmemomethod(memomethod):
+class LockMemoMethod(MemoMethod):
     """ A modified memomethod that locks the class it's called on while the
         method is being called
 
         This can only be added to a bound method on a MemoClass
     """
     def __init__(self, *args, **kwargs):
-        super(lockmemomethod, self).__init__(
-                *args, memofunc_cls=lockmemofunc, **kwargs)
+        super(LockMemoMethod, self).__init__(
+                *args, memofunc_cls=LockMemoFunc, **kwargs)
+lockmemomethod = make_decorator(LockMemoMethod)
 
 class MemoClass(object):
     """ A class with several utilities to enable interacting with memoized
@@ -63,11 +66,19 @@ class MemoClass(object):
         on another object that it doesn't own or control).
     """
 
-    def __init__(self, mutable_attrs=None, attrs_mutate_base=True):
-        if mutable_attrs is None:
-            mutable_attrs = set()
+    def __init__(self, mutable_attrs=()):
+        """ Create the object
+            
+            :param mutable_attrs:
+                Any attributes to be treated as mutable. Setting a mutable
+                attribute does not mutate the class and therefore is allowed on
+                locked classes and will not reset the class' caches. If
+                mutable_attrs is None then *all* attributes are treated as
+                mutable
+        """
+        if mutable_attrs is not None:
+            mutable_attrs = set(mutable_attrs)
         self._locked = False
-        self._attrs_mutate_base = attrs_mutate_base
         self._mutable_attrs = mutable_attrs
 
     @memoclsmethod
@@ -75,12 +86,12 @@ class MemoClass(object):
         """ List the memomethods associated with this class """
         if not base:
             return set(k for k, v in iteritems(cls.__dict__)
-                if isinstance(v, memomethod) and
-                (include_clsmethods or not isinstance(memoclsmethod) ) )
+                if isinstance(v, MemoMethod) and
+                (clsmethods or not isinstance(v, MemoClsMethod) ) )
         else:
-            return set().union(
+            return set().union(*(
                     subcls._memomethods(False, clsmethods)
-                    for subcls in cls.mro() )
+                    for subcls in cls.mro() if issubclass(subcls, MemoClass)))
 
     def enable_caches(self, clsmethods=False):
         """ Enable the cache on all memomethods """
@@ -126,39 +137,46 @@ class MemoClass(object):
     def locked(self, clear_on_unlock=True):
         """ A context manager that temporarily locks the class
 
+            Does nothing if the class is already locked
+    
             :param clear_on_unlock:
                 If True, disable the class' caches and clear them when
                 unlocking. The caches will only be cleared if the class was
                 unlocked before calling locked
         """
-        was_locked = self.is_locked
-        if not was_locked:
+        if self.is_locked:
+            yield
+        else:
             self.lock()
-        yield
-        if not was_locked:
+            yield
             self.unlock(clear_on_unlock)
 
     @contextmanager
     def unlocked(self, clear_caches=True):
-        """ A context manager that temporarily unlocks the class """
-        self.clear_caches()
-        self.disable_caches()
-        was_locked = self.is_locked
-        if was_locked:
-            self.unlock()
-        yield
-        self.enable_caches()
-        if was_locked:
+        """ A context manager that temporarily unlocks the class
+        
+            Does nothing if the class is already unlocked
+
+            :param clear_caches:
+                If True, clear and disable the caches when unlocking
+        """
+        if self.is_locked:
+            self.unlock(clear_caches)
+            yield
             self.lock()
+        else:
+            yield
 
     def __setattr__(self, key, value):
         """ By default, setting an attribute on a class should mutate it """
-        if hasattr(self, "_mutable_attrs") and key in self._mutable_attrs:
+        if key == "_locked" or \
+           (hasattr(self, "_mutable_attrs") and (
+               self._mutable_attrs is None or key in self._mutable_attrs) ):
             pass
-        elif self.is_locked:
+        elif hasattr(self, "_locked") and self.is_locked:
             raise ValueError(
                     "Cannot set attribute {0} on locked class {1}".format(
                         key, self) )
         else:
-            self.clear_caches(self._attrs_mutate_base)
+            self.clear_caches()
         return super(MemoClass, self).__setattr__(key, value)

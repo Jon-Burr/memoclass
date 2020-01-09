@@ -1,7 +1,7 @@
 """ Basic decoarators for memoizing functions and methods"""
 
 from builtins import object
-from functools import update_wrapper
+from functools import update_wrapper, partial
 from inspect import getcallargs, isfunction, ismethod
 from weakref import WeakKeyDictionary
 from types import MethodType
@@ -33,7 +33,15 @@ def _to_hashable(arg=None):
     else:
         return arg
 
-class memofunc(object):
+def make_decorator(decorator):
+    def inner(func=None, **kwargs):
+        if func is None:
+            return partial(decorator, **kwargs)
+        else:
+            return decorator(func, **kwargs)
+    return inner
+
+class MemoFunc(object):
     """ Memoizes a free function """
 
     def __init__(self, func, cache_cls=dict, on_return=lambda x: x,
@@ -105,12 +113,13 @@ class memofunc(object):
         if key not in self._cache:
             self._cache[key] = self._wrapped_func(*args, **kwargs)
         return self._on_return(self._cache[key])
+memofunc = make_decorator(MemoFunc)
 
-class memomethod(object):
+class MemoMethod(object):
     """ Memoizes a class' method """
 
     def __init__(self, func, cache_cls=dict, on_return=lambda x: x,
-                 hasher=_to_hashable, memofunc_cls=memofunc):
+                 hasher=_to_hashable, memofunc_cls=MemoFunc):
         """ Memoize a bound method
 
             :param func: The function to memoize
@@ -165,8 +174,9 @@ class memomethod(object):
 
     def __call__(self, bound, *args, **kwargs):
         return self.__get__(bound)(*args, **kwargs)
+memomethod = make_decorator(MemoMethod)
 
-class memoclsmethod(memomethod):
+class MemoClsMethod(MemoMethod):
     """ Memoize a classmethod
 
         Memomethod/memofunc do not interact nicely with the classmethod
@@ -185,3 +195,4 @@ class memoclsmethod(memomethod):
                     on_return = self._on_return,
                     hasher = self._hasher)
         return self._bound_methods[objtype]
+memoclsmethod = make_decorator(MemoClsMethod)
