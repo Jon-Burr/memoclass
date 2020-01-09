@@ -79,14 +79,12 @@ class MemoClass(object):
 
     def disable_caches(self, clsmethods=False):
         """ Disable the cache on all memomethods """
-        print("Disabling caches on {0}".format(self) )
         self._caches_enabled = False
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).disable_cache()
 
     def clear_caches(self, clsmethods=False):
         """ Clear the cache on all memomethods """
-        print("Clearing caches on {0}".format(self) )
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).clear_cache()
 
@@ -110,7 +108,6 @@ class MemoClass(object):
             :param clear_caches:
                 If True, disable the class' caches and clear them
         """
-        print("Unlocking with clear_caches == {0}".format(clear_caches) )
         self._locked = False
         if clear_caches:
             self.disable_caches()
@@ -131,7 +128,6 @@ class MemoClass(object):
             # Clear and disable the caches when unlocking if they were disabled
             # before
             clear_on_unlock = not self._caches_enabled
-        print("Locking {0} with clear_on_unlock {1}. Is locked == {2}".format(self, clear_on_unlock, self.is_locked) )
         if self.is_locked:
             yield
         else:
@@ -166,6 +162,5 @@ class MemoClass(object):
                     "Cannot set attribute {0} on locked class {1}".format(
                         key, self) )
         else:
-            print("Clearing caches due to setting attribute {0}".format(key) )
             self.clear_caches()
         return super(MemoClass, self).__setattr__(key, value)
