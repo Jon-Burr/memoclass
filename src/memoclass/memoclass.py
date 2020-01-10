@@ -102,7 +102,7 @@ class MemoClass(object):
         self.enable_caches()
         self._locked = True
 
-    def unlock(self, clear_caches=True):
+    def unlock(self, clear_caches):
         """ Unlock the class
 
             :param clear_caches:
