@@ -14,7 +14,7 @@ setup(
     version="0.1.1",
     packages=find_packages('src'),
     package_dir={'':'src'},
-    license="Apache License 2.0",
+    license="MIT",
     description="A utility package for memoizing functions and class methods",
     long_description=long_description,
     long_description_content_type="text/x-rst",
