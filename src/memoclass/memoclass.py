@@ -1,6 +1,6 @@
 from builtins import object
 from .memoize import (
-        memoclsmethod, memomethod, memofunc, MemoFunc, MemoMethod,
+        memoclsmethod, memomethod, memofunc, MemoMethod,
         MemoClsMethod, make_decorator)
 from functools import wraps
 from contextlib import contextmanager
