@@ -2,8 +2,7 @@
 
 from builtins import object
 from functools import update_wrapper, partial
-from inspect import getcallargs, isfunction, ismethod
-import weakref
+from inspect import getcallargs, isfunction, ismethod, getargspec
 from types import MethodType
 from future.utils import iteritems, itervalues
 
@@ -90,10 +89,11 @@ class MemoFunc(object):
     def _mhashfunc(self, *args, **kwargs):
         """ Get the hashable version of the supplied arguments """
         callargs = getcallargs(self._wrapped_func, *args, **kwargs)
-        if 'self' in callargs and hasattr(self._wrapped_func, "__self__") and \
-                self._wrapped_func.__self__ is callargs["self"]:
+        if hasattr(self._wrapped_func, "__self__") and \
+                self._wrapped_func.__self__ is not None:
+            spec = getargspec(self._wrapped_func)
             # Stop it hashing the self argument, this is already unique
-            del callargs["self"]
+            del callargs[spec.args[0]]
         return self._hasher(callargs)
 
     def _mhashother(self, *args, **kwargs):
@@ -186,7 +186,6 @@ class MemoMethod(object):
         self._bound_methods = {}
         self._locks = locks
         self._clear_on_unlock = clear_on_unlock
-        self._weakrefs = []
 
     def __get__(self, obj, objtype=None):
         if obj is None:
@@ -208,10 +207,6 @@ class MemoMethod(object):
                         **kwargs)
             else:
                 self._bound_methods[id(obj)] = MemoFunc(func, **kwargs)
-            def callback(ref):
-                del self._bound_methods[id(obj)]
-                self._weakrefs.remove(ref)
-            self._weakrefs.append(weakref.ref(obj, callback) )
         return self._bound_methods[id(obj)]
 
     def clear_cache(self, bound=None):
