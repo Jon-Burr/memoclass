@@ -2,9 +2,13 @@
 
 from builtins import object
 from functools import update_wrapper, partial
-from inspect import getcallargs, isfunction, ismethod, getargspec
+from inspect import getcallargs, isfunction, ismethod
 from types import MethodType
-from future.utils import iteritems, itervalues
+from future.utils import iteritems, itervalues, PY3
+if PY3:
+    from inspect import getfullargspec as getargspec
+else:
+    from inspect import getargspec
 
 def _to_hashable(arg=None):
     """ Convert an argument into a hashable type
