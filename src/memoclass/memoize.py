@@ -3,7 +3,7 @@
 from builtins import object
 from functools import update_wrapper, partial
 from inspect import getcallargs, isfunction, ismethod
-from weakref import WeakKeyDictionary
+import weakref
 from types import MethodType
 from future.utils import iteritems, itervalues
 
@@ -89,7 +89,12 @@ class MemoFunc(object):
 
     def _mhashfunc(self, *args, **kwargs):
         """ Get the hashable version of the supplied arguments """
-        return self._hasher(getcallargs(self._wrapped_func, *args, **kwargs) )
+        callargs = getcallargs(self._wrapped_func, *args, **kwargs)
+        if 'self' in callargs and hasattr(self._wrapped_func, "__self__") and \
+                self._wrapped_func.__self__ is callargs["self"]:
+            # Stop it hashing the self argument, this is already unique
+            del callargs["self"]
+        return self._hasher(callargs)
 
     def _mhashother(self, *args, **kwargs):
         return self._hasher((args, kwargs))
@@ -178,16 +183,17 @@ class MemoMethod(object):
         self._cache_cls = cache_cls
         self._on_return = on_return
         self._hasher = hasher
-        self._bound_methods = WeakKeyDictionary()
+        self._bound_methods = {}
         self._locks = locks
         self._clear_on_unlock = clear_on_unlock
+        self._weakrefs = []
 
     def __get__(self, obj, objtype=None):
         if obj is None:
             # Retrieving from the class itself, therefore return the method
             # memoizer
             return self
-        if obj not in self._bound_methods:
+        if id(obj) not in self._bound_methods:
             # Use python's internal function binding to make everything play
             # nice
             func = MethodType(self._wrapped_func, obj)
@@ -196,13 +202,17 @@ class MemoMethod(object):
                     'on_return' : self._on_return,
                     'hasher'    : self._hasher}
             if self._locks and hasattr(obj, 'locked') and callable(obj.locked):
-                self._bound_methods[obj] = LockMemoFunc(
+                self._bound_methods[id(obj)] = LockMemoFunc(
                         func,
                         clear_on_unlock=self._clear_on_unlock,
                         **kwargs)
             else:
-                self._bound_methods[obj] = MemoFunc(func, **kwargs)
-        return self._bound_methods[obj]
+                self._bound_methods[id(obj)] = MemoFunc(func, **kwargs)
+            def callback(ref):
+                del self._bound_methods[id(obj)]
+                self._weakrefs.remove(ref)
+            self._weakrefs.append(weakref.ref(obj, callback) )
+        return self._bound_methods[id(obj)]
 
     def clear_cache(self, bound=None):
         """ Clear the cache
