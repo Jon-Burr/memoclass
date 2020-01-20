@@ -72,3 +72,13 @@ def test_clear():
     PartialSum.__call__.clear_cache(b)
     b(3)
     assert call_count == 3
+
+def test_garbage():
+    """ Test to make sure that garbage collection catches any relevant caches
+    """
+    reset()
+    a = PartialSum(5)
+    a(3)
+    assert len(PartialSum.__call__._bound_caches) == 1
+    a = None
+    assert len(PartialSum.__call__._bound_caches) == 0

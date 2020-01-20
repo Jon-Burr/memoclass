@@ -42,6 +42,7 @@ def test_cache():
     a(3)
     assert a(5) == 10
     assert a.call_count == 2
+    a = None
 
 def test_mutate():
     """ Make sure that the mutates functionality is working """

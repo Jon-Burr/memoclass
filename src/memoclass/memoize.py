@@ -13,6 +13,7 @@ else:
     from collections import MutableMapping
     from inspect import getargspec
     from funcsigs import signature, Signature, Parameter
+import weakref
 
 def _to_hashable(arg=None):
     """ Convert an argument into a hashable type
@@ -92,15 +93,17 @@ def make_decorator(decorator):
 
 class MemoFunc(object):
     """ Memoizes a free function """
-    def __init__(self, func, cache_cls=dict, on_return=lambda x: x,
+    def __init__(self, func, cache=None, on_return=lambda x: x,
                  prehash=_to_hashable):
         """ Memoize a free function
 
-            The locks and clear_on_unlock parameters can usually be ignored by
-            users, they are used by the 'MemoMethod' class
-
             :param func: The function to memoize
-            :param cache_cls: The type to use for caching, defaults to dict
+            :param cache:
+                The cache to use, if None is provided, use an empty dict. This
+                allows keeping hold of a cache without persisting the MemoFunc.
+                The main use for this is when memoising a bound function we do
+                not add an extra reference to the object that cannot be garbage
+                collected.
             :param on_return: 
                 An additional function called on the return value. The main use
                 case for this is to supply a copy function, for the case when
@@ -111,21 +114,13 @@ class MemoFunc(object):
             :param prehash:
                 The function that should be used to make the arguments hashable.
                 It will receive the callargs dictionary as an argument
-            :param locks:
-                If True, the function *must* be called with an object supplied
-                to the first argument that has a 'locked' method, taking one
-                argument that is a context manager (will usually be a MemoClass
-                object)
-            :param clear_on_unlock:
-                Parameter passed to the object in the first argument's locked()
-                method if locks is set and used
         """
         update_wrapper(self, func)
         # Set the __wrapped__ attribute to play nicely with signature
         self.__wrapped__ = func
         # Cache the signature here, rather than recalculating it every call
         self._signature = signature(func)
-        self._cache = cache_cls()
+        self._cache = {} if cache is None else cache
         self._on_return = on_return
         self._prehash = prehash
         self._cache_enabled = True
@@ -215,7 +210,8 @@ class MemoMethod(object):
         self._cache_cls = cache_cls
         self._on_return = on_return
         self._prehash = prehash
-        self._bound_methods = {}
+        self._bound_caches = {}
+        self._weakrefs = []
         self._locks = locks
         self._clear_on_unlock = clear_on_unlock
 
@@ -224,35 +220,44 @@ class MemoMethod(object):
             # Retrieving from the class itself, therefore return the method
             # memoizer
             return self
-        if id(obj) not in self._bound_methods:
-            # Use python's internal function binding to make everything play
-            # nice
-            func = MethodType(self.__wrapped__, obj)
-            kwargs = {
-                    'cache_cls' : self._cache_cls,
-                    'on_return' : self._on_return,
-                    'prehash'    : self._prehash}
-            if self._locks and hasattr(obj, 'locked') and callable(obj.locked):
-                self._bound_methods[id(obj)] = LockMemoFunc(
-                        func,
-                        clear_on_unlock=self._clear_on_unlock,
-                        **kwargs)
-            else:
-                self._bound_methods[id(obj)] = MemoFunc(func, **kwargs)
-        return self._bound_methods[id(obj)]
+        obj_id = id(obj)
+        if obj_id not in self._bound_caches:
+            # Create a new cache
+            cache = self._cache_cls()
+            self._bound_caches[obj_id] = cache
+            def _on_delete(r):
+                self._weakrefs.remove(r)
+                del self._bound_caches[obj_id]
+            self._weakrefs.append(weakref.ref(obj, _on_delete) )
+        else:
+            cache = self._bound_caches[obj_id]
+        func = MethodType(self.__wrapped__, obj)
+        kwargs = {
+                # Use python's internal function binding
+                # 'func' : MethodType(self.__wrapped__, obj),
+                'func' : func,
+                'cache' : cache,
+                'on_return' : self._on_return,
+                'prehash' : self._prehash}
+        # Pick the right type to use (i.e. use a LockMemoFunc if we should)
+        if self._locks and hasattr(obj, 'locked') and callable(obj.locked):
+            return LockMemoFunc(clear_on_unlock=self._clear_on_unlock, **kwargs)
+        else:
+            return MemoFunc(**kwargs)
 
     def clear_cache(self, bound=None):
         """ Clear the cache
 
             :param bound:
                 If not None, clear only the cache corresponding to that object,
-                if bound is None, clear all caches
+                if bound is None, remove all caches
         """
-        if bound is not None and bound in self._bound_methods:
-            self._bound_methods[bound].clear_cache()
-        else:
-            for v in itervalues(self._bound_methods):
-                v.clear_cache()
+        if bound is None:
+            self._bound_caches.clear()
+            # Python2 doesn't have a list.clear method...
+            del self._weakrefs[:]
+        elif id(bound) in self._bound_caches:
+            self._bound_caches[id(bound)].clear()
 
     def __call__(self, bound, *args, **kwargs):
         return self.__get__(bound)(*args, **kwargs)
@@ -269,12 +274,15 @@ class MemoClsMethod(MemoMethod):
     def __get__(self, obj, objtype=None):
         if objtype is None:
             objtype = type(obj)
-        if objtype not in self._bound_methods:
-            func = MethodType(self.__wrapped__, objtype)
-            self._bound_methods[objtype] = memofunc(
-                    func=func,
-                    cache_cls = self._cache_cls,
-                    on_return = self._on_return,
-                    prehash = self._prehash)
-        return self._bound_methods[objtype]
+        if id(objtype) not in self._bound_caches:
+            # create a new cache
+            cache = self._cache_cls()
+            self._bound_caches[id(objtype)] = cache
+        else:
+            cache = self._bound_caches[id(objtype)]
+        return memofunc(
+                func=MethodType(self.__wrapped__, objtype),
+                cache=cache,
+                on_return=self._on_return,
+                prehash=self._prehash)
 memoclsmethod = make_decorator(MemoClsMethod)
