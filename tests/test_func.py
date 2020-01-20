@@ -18,6 +18,11 @@ def build_list():
     """ Create and return a list """
     return [1, 2, 3]
 
+@memofunc
+def join_list(head, tail=[1, 2, 3]):
+    """ Join two lists """
+    return head + tail
+
 def reset():
     global factorial_count
     factorial_count = 0
@@ -72,3 +77,9 @@ def test_onreturn():
     a = build_list()
     b = build_list()
     assert a is not b
+
+def test_defaults():
+    """ Ensure that default arguments are correctly treated """
+    a = join_list([0])
+    b = join_list([0], [1, 2, 3])
+    assert a is b
