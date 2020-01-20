@@ -6,8 +6,10 @@ from inspect import getcallargs, isfunction, ismethod
 from types import MethodType
 from future.utils import iteritems, itervalues, PY3
 if PY3:
+    from collections.abc import MutableMapping
     from inspect import getfullargspec as getargspec
 else:
+    from collections import MutableMapping
     from inspect import getargspec
 
 def _to_hashable(arg=None):
