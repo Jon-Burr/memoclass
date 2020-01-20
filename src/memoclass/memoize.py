@@ -8,9 +8,11 @@ from future.utils import iteritems, itervalues, PY3
 if PY3:
     from collections.abc import MutableMapping
     from inspect import getfullargspec as getargspec
+    from inspect import signature, Signature, Parameter
 else:
     from collections import MutableMapping
     from inspect import getargspec
+    from funcsigs import signature, Signature, Parameter
 
 def _to_hashable(arg=None):
     """ Convert an argument into a hashable type
@@ -38,6 +40,48 @@ def _to_hashable(arg=None):
     else:
         return arg
 
+def bind_callargs(sig, *args, **kwargs):
+    """ Convert a set of args and kwargs into a dictionary of function arguments
+        including defaults
+
+        This is different to the result of signature.bind(*args,
+        **kwargs).arguments as it includes defaults. It's different to
+        inspect.getcallargs as it works properly on callables.
+        It's equivalent to
+
+        >>> b = sig.bind(*args, **kwargs)
+        >>> b.apply_defaults()
+        >>> return dict(b.arguments)
+
+        but the apply_defaults function is python3 only and not included in
+        funcsigs
+    """
+    bound = sig.bind(*args, **kwargs).arguments
+    params = sig.parameters
+    callargs = {}
+    for name, parameter in iteritems(params):
+        try:
+            # Get the paramter value from the bound arguments
+            callargs[name] = bound[name]
+        except KeyError:
+            # Have to get the 'default' value
+            if parameter.default is not Signature.empty:
+                # There *is* a default!
+                callargs[name] = parameter.default
+            elif parameter.kind == Parameter.VAR_POSITIONAL:
+                # The default for varargs is an empty tuple
+                callargs[name] = ()
+            elif paramter.kind == Parameter.VAR_KEYWORD:
+                # The default for varkwargs is an empty dict
+                callargs[name] = {}
+            else:
+                # This *should* be impossible as if we reach here, bind should
+                # have failed
+                # Raise a TypeError, as that is what bind should have raised
+                raise TypeError(
+                        "Cannot find default value for parameter " + name)
+    return callargs
+
 def make_decorator(decorator):
     def inner(func=None, **kwargs):
         if func is None:
@@ -49,7 +93,7 @@ def make_decorator(decorator):
 class MemoFunc(object):
     """ Memoizes a free function """
     def __init__(self, func, cache_cls=dict, on_return=lambda x: x,
-                 hasher=_to_hashable):
+                 prehash=_to_hashable):
         """ Memoize a free function
 
             The locks and clear_on_unlock parameters can usually be ignored by
@@ -64,11 +108,9 @@ class MemoFunc(object):
                 that is constructed on the fly and shouldn't be persistent
                 between calls, defaults to a lambda that just returns the value
                 unmodified.
-            :param hasher:
+            :param prehash:
                 The function that should be used to make the arguments hashable.
-                It will receive the callargs dictionary as an argument if func
-                satisifies inspect.isfunction, otherwise receives a two-tuple of
-                (args, kwargs), defaults to _to_hashable
+                It will receive the callargs dictionary as an argument
             :param locks:
                 If True, the function *must* be called with an object supplied
                 to the first argument that has a 'locked' method, taking one
@@ -79,31 +121,14 @@ class MemoFunc(object):
                 method if locks is set and used
         """
         update_wrapper(self, func)
-        self._wrapped_func = func
+        # Set the __wrapped__ attribute to play nicely with signature
+        self.__wrapped__ = func
+        # Cache the signature here, rather than recalculating it every call
+        self._signature = signature(func)
         self._cache = cache_cls()
         self._on_return = on_return
-        self._hasher = hasher
+        self._prehash = prehash
         self._cache_enabled = True
-        # Select the right function to make the callargs hashable, one version
-        # uses getcallargs to substitute default arguments correctly, the other
-        # just provides a tuple of (args, kwargs) and is used as a backup
-        if isfunction(func) or ismethod(func):
-            self._make_hashable = self._mhashfunc
-        else:
-            self._make_hashable = self._mhashother
-
-    def _mhashfunc(self, *args, **kwargs):
-        """ Get the hashable version of the supplied arguments """
-        callargs = getcallargs(self._wrapped_func, *args, **kwargs)
-        if hasattr(self._wrapped_func, "__self__") and \
-                self._wrapped_func.__self__ is not None:
-            spec = getargspec(self._wrapped_func)
-            # Stop it hashing the self argument, this is already unique
-            del callargs[spec.args[0]]
-        return self._hasher(callargs)
-
-    def _mhashother(self, *args, **kwargs):
-        return self._hasher((args, kwargs))
 
     def clear_cache(self):
         """ Clear the cache """
@@ -112,7 +137,8 @@ class MemoFunc(object):
     def rm_from_cache(self, *args, **kwargs):
         """ Remove the corresponding value from the cache """
         try:
-            del self._cache[self._make_hashable(*args, **kwargs)]
+            del self._cache[self._prehash(
+                bind_callargs(self._signature, *args, **kwargs) )]
         except KeyError:
             pass
 
@@ -129,10 +155,10 @@ class MemoFunc(object):
     def __call__(self, *args, **kwargs):
         """ Call the actual function """
         if not self.cache_enabled:
-            return self._wrapped_func(*args, **kwargs)
-        key = self._make_hashable(*args, **kwargs)
+            return self.__wrapped__(*args, **kwargs)
+        key = self._prehash(bind_callargs(self._signature, *args, **kwargs) )
         if key not in self._cache:
-            self._cache[key] = self._wrapped_func(*args, **kwargs)
+            self._cache[key] = self.__wrapped__(*args, **kwargs)
         return self._on_return(self._cache[key])
 
 memofunc = make_decorator(MemoFunc)
@@ -152,14 +178,14 @@ class LockMemoFunc(MemoFunc):
 
     def __call__(self, *args, **kwargs):
         """ Call the function """
-        with self._wrapped_func.__self__.locked(self._clear_on_unlock):
+        with self.__wrapped__.__self__.locked(self._clear_on_unlock):
             return super(LockMemoFunc, self).__call__(*args, **kwargs)
 
 class MemoMethod(object):
     """ Memoizes a class' method """
 
     def __init__(self, func, cache_cls=dict, on_return=lambda x: x,
-                 hasher=_to_hashable, locks=True, clear_on_unlock=None):
+                 prehash=_to_hashable, locks=True, clear_on_unlock=None):
         """ Memoize a bound method
 
             As 'locks' defaults to True, if a class has a 'locked' function
@@ -175,7 +201,7 @@ class MemoMethod(object):
                 that is constructed on the fly and shouldn't be persistent
                 between calls, defaults to a lambda that just returns the value
                 unmodified.
-            :param hasher:
+            :param prehash:
                 The function that should be used to make the arguments hashable.
                 It will receive the callargs dictionary as an argument, defaults
                 to _to_hashable
@@ -185,10 +211,10 @@ class MemoMethod(object):
             :param clear_on_unlock:
                 If locks is used, the argument to the 'locked' function
         """
-        self._wrapped_func = func
+        self.__wrapped__ = func
         self._cache_cls = cache_cls
         self._on_return = on_return
-        self._hasher = hasher
+        self._prehash = prehash
         self._bound_methods = {}
         self._locks = locks
         self._clear_on_unlock = clear_on_unlock
@@ -201,11 +227,11 @@ class MemoMethod(object):
         if id(obj) not in self._bound_methods:
             # Use python's internal function binding to make everything play
             # nice
-            func = MethodType(self._wrapped_func, obj)
+            func = MethodType(self.__wrapped__, obj)
             kwargs = {
                     'cache_cls' : self._cache_cls,
                     'on_return' : self._on_return,
-                    'hasher'    : self._hasher}
+                    'prehash'    : self._prehash}
             if self._locks and hasattr(obj, 'locked') and callable(obj.locked):
                 self._bound_methods[id(obj)] = LockMemoFunc(
                         func,
@@ -244,11 +270,11 @@ class MemoClsMethod(MemoMethod):
         if objtype is None:
             objtype = type(obj)
         if objtype not in self._bound_methods:
-            func = MethodType(self._wrapped_func, objtype)
+            func = MethodType(self.__wrapped__, objtype)
             self._bound_methods[objtype] = memofunc(
                     func=func,
                     cache_cls = self._cache_cls,
                     on_return = self._on_return,
-                    hasher = self._hasher)
+                    prehash = self._prehash)
         return self._bound_methods[objtype]
 memoclsmethod = make_decorator(MemoClsMethod)
