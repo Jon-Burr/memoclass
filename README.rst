@@ -21,7 +21,7 @@ simple decorator, this package provides enhanced utility for memoizing methods
 on *classes*. Especially, this allows for a couple of ways of automatically
 clearing the caches related to a particular instance, for example, when changing
 a member variable would change the result of those functions. This package also
-uses :python:`inspect.getcallargs` to correctly treat default argument values, where
+uses :python:`inspect.signature` to correctly treat default argument values, where
 possible.
 
 Preliminary sphinx documentation can be found at
