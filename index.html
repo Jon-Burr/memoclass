@@ -1,0 +1,259 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>memoclass &#8212; memoclass 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="memoclass package" href="memoclass.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="memoclass">
+<h1>memoclass</h1>
+<div class="section" id="a-utility-package-for-memoizing-functions-and-class-methods">
+<h2>A utility package for memoizing functions and class methods</h2>
+<div class="section" id="introduction">
+<h3>Introduction</h3>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Memoization">Memoization</a> is a common technique used primarily as an optimizer, allowing the
+caching of the return values of expensive functions. When a memoized function is
+called with a given set of arguments for the first time its return value is
+cached, and that value is then returned on all subsequent calls.</p>
+<p>While many memoization packages exist, as well as instructions to write your own
+simple decorator, this package provides enhanced utility for memoizing methods
+on <em>classes</em>. Especially, this allows for a couple of ways of automatically
+clearing the caches related to a particular instance, for example, when changing
+a member variable would change the result of those functions. This package also
+uses <code class="code python docutils literal notranslate"><span class="name"><span class="pre">inspect</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">signature</span></span></code> to correctly treat default argument values, where
+possible.</p>
+<p>Preliminary sphinx documentation can be found at
+<a class="reference external" href="https://jon-burr.github.io/memoclass/memoclass.html">https://jon-burr.github.io/memoclass/memoclass.html</a></p>
+<p>The project is hosted on github at <a class="reference external" href="https://github.com/Jon-Burr/memoclass">https://github.com/Jon-Burr/memoclass</a></p>
+</div>
+<div class="section" id="installation">
+<h3>Installation</h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install memoclass
+</pre></div>
+</div>
+</div>
+<div class="section" id="overview-of-core-components">
+<h3>Overview of core components</h3>
+<div class="section" id="memoclass-memoize-memofunc">
+<h4><code class="code python docutils literal notranslate"><span class="name"><span class="pre">memoclass</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">memoize</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">memofunc</span></span></code></h4>
+<p>Memoizes a single free function. The returned object is a <code class="code python docutils literal notranslate"><span class="name"><span class="pre">MemoFunc</span></span></code> object,
+which has functions that allow you to temporarily disable the caching, or clear
+it entirely.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">memoclass.memoize</span> <span class="kn">import</span> <span class="n">memofunc</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nd">@memofunc</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">build_list</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">build_list</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">build_list</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="ow">is</span> <span class="n">b</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">build_list</span><span class="o">.</span><span class="n">clear_cache</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">build_list</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="ow">is</span> <span class="n">c</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<p>The <code class="code python docutils literal notranslate"><span class="name"><span class="pre">MemoFunc</span></span></code> class also has some extra properties that can be set while
+decorating</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">memoclass.memoize</span> <span class="kn">import</span> <span class="n">memofunc</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">copy</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nd">@memofunc</span><span class="p">(</span><span class="n">on_return</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">build_list</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">build_list</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">build_list</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="ow">is</span> <span class="n">b</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="memoclass-memoize-memomethod">
+<h4><code class="code python docutils literal notranslate"><span class="name"><span class="pre">memoclass</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">memoize</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">memomethod</span></span></code></h4>
+<p>Memoizes a class method. Methods bound to different instances have independent
+caches, so the cache on one object can be cleared without clearing it for all
+other objects.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">memoclass.memoize</span> <span class="kn">import</span> <span class="n">memomethod</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">ListBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="nd">@memomethod</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">ListBuilder</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">ListBuilder</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">x</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">y</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="ow">is</span> <span class="n">b</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="fm">__call__</span><span class="o">.</span><span class="n">clear_cache</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">y</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="ow">is</span> <span class="n">c</span> <span class="c1"># Clearing x&#39;s cache has not touched y&#39;s</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="memoclass-memoclass-memoclass">
+<h4><code class="code python docutils literal notranslate"><span class="name"><span class="pre">memoclass</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">memoclass</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">MemoClass</span></span></code></h4>
+<p>Base class meant to make interacting with memoized methods easier. It can
+enabled, disable and clear all memomethods attached to an instance (note that
+which methods exist is calculated at the <em>class</em> level, so any added onto an
+instance will not be seen).</p>
+<p>By default, setting any attribute will reset the object’s caches, unless that
+attribute has been provided to the <code class="code python docutils literal notranslate"><span class="name"><span class="pre">mutable_attrs</span></span></code> argument of
+<code class="code python docutils literal notranslate"><span class="name"><span class="pre">MemoClass</span></span><span class="operator"><span class="pre">.</span></span><span class="name function magic"><span class="pre">__init__</span></span></code>. This behaviour can be disabled by setting
+<code class="code python docutils literal notranslate"><span class="name"><span class="pre">mutable_attrs</span></span><span class="operator"><span class="pre">=</span></span><span class="keyword constant"><span class="pre">None</span></span></code>. Additionally, any function can have the
+<code class="code python docutils literal notranslate"><span class="name"><span class="pre">memoclass</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">memoclass</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">mutates</span></span></code> decorator applied to it, which will then reset
+the caches whenever it is called.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">memoclass.memoize</span> <span class="kn">import</span> <span class="n">memomethod</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">memoclass.memoclass</span> <span class="kn">import</span> <span class="n">MemoClass</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">PartialSum</span><span class="p">(</span><span class="n">MemoClass</span><span class="p">):</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stored</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="bp">self</span><span class="o">.</span><span class="n">stored</span> <span class="o">=</span> <span class="n">stored</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="nd">@memomethod</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored</span> <span class="o">+</span> <span class="n">other</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">PartialSum</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="go">8</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">stored</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># Triggers a cache reset</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="go">6</span>
+</pre></div>
+</div>
+<p>A <code class="code python docutils literal notranslate"><span class="name"><span class="pre">MemoClass</span></span></code> can be <code class="docutils literal notranslate"><span class="pre">locked</span></code> which means that all caches are enabled and
+calling a function marked <code class="code python docutils literal notranslate"><span class="name"><span class="pre">mutates</span></span></code> or setting a non-mutable attribute results
+in a <code class="code python docutils literal notranslate"><span class="name exception"><span class="pre">ValueError</span></span></code>. When the class is then unlocked again, if the caches
+were previously disabled, they will be disabled and cleared. This means it is
+possible to create a class whose methods are only temporarily memoized. This
+might be useful if a class has expensive methods to calculate that rely on a
+global state. Note that by default, a <code class="code python docutils literal notranslate"><span class="name"><span class="pre">memomethod</span></span></code> declared on a
+<code class="code python docutils literal notranslate"><span class="name"><span class="pre">MemoClass</span></span></code> will lock its caller while it is called.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="memoclass.html">memoclass package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="memoclass.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memoclass.html#module-memoclass.memoclass">memoclass.memoclass module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memoclass.html#module-memoclass.memoize">memoclass.memoize module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memoclass.html#module-memoclass">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h3>Indices and tables</h3>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">memoclass</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="memoclass.html">memoclass package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="memoclass.html" title="next chapter">memoclass package</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Jon Burr.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

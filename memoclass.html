@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>memoclass package &#8212; memoclass 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="memoclass" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="memoclass-package">
+<h1>memoclass package</h1>
+<div class="section" id="submodules">
+<h2>Submodules</h2>
+</div>
+<div class="section" id="module-memoclass.memoclass">
+<span id="memoclass-memoclass-module"></span><h2>memoclass.memoclass module</h2>
+<dl class="class">
+<dt id="memoclass.memoclass.MemoClass">
+<em class="property">class </em><code class="sig-prename descclassname">memoclass.memoclass.</code><code class="sig-name descname">MemoClass</code><span class="sig-paren">(</span><em class="sig-param">mutable_attrs=()</em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class with several utilities to enable interacting with memoized
+methods</p>
+<p>A MemoClass’ methods can be declared mutating, in which case they will
+automatically clear the caches on any memomethods present on it.</p>
+<p>Alternatively, a MemoClass can be locked, which prevents calling any
+mutating methods. By default, locking enables caching and unlocking
+disables and clears the caches <em>if they were disabled before</em>, which
+allows it to temporarily create a ‘const’ object. This is useful when an
+object has time consuming attributes to calculate but may change in ways
+that are difficult to reset the caches on (for example, if the class
+calculates values based on another object that it doesn’t own or
+control).</p>
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.clear_caches">
+<code class="sig-name descname">clear_caches</code><span class="sig-paren">(</span><em class="sig-param">clsmethods=False</em><span class="sig-paren">)</span></dt>
+<dd><p>Clear the cache on all memomethods</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.disable_caches">
+<code class="sig-name descname">disable_caches</code><span class="sig-paren">(</span><em class="sig-param">clsmethods=False</em><span class="sig-paren">)</span></dt>
+<dd><p>Disable the cache on all memomethods</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.enable_caches">
+<code class="sig-name descname">enable_caches</code><span class="sig-paren">(</span><em class="sig-param">clsmethods=False</em><span class="sig-paren">)</span></dt>
+<dd><p>Enable the cache on all memomethods</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.is_locked">
+<em class="property">property </em><code class="sig-name descname">is_locked</code></dt>
+<dd><p>Is this class locked</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.lock">
+<code class="sig-name descname">lock</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Lock the class</p>
+<p>A locked class’ caches are always enabled and calling a mutating
+method on it results in a ValueError</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.locked">
+<code class="sig-name descname">locked</code><span class="sig-paren">(</span><em class="sig-param">clear_on_unlock=None</em><span class="sig-paren">)</span></dt>
+<dd><p>A context manager that temporarily locks the class</p>
+<p>Does nothing if the class is already locked</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>clear_on_unlock</strong> – If True, disable the class’ caches and clear them when
+unlocking. The caches will only be cleared if the class was
+unlocked before calling locked</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.mutate">
+<code class="sig-name descname">mutate</code><span class="sig-paren">(</span><em class="sig-param">_stack=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Signal that something has changed in this object</p>
+<p>Raises a ValueError if this object is locked</p>
+<p>Clears the caches on this object, then calls ‘mutate’ on anything
+returned by self.mutates_with_this()</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.mutates_with_this">
+<code class="sig-name descname">mutates_with_this</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Return an iterable of objects whose mutate method should be called
+when this one is</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.unlock">
+<code class="sig-name descname">unlock</code><span class="sig-paren">(</span><em class="sig-param">clear_caches</em><span class="sig-paren">)</span></dt>
+<dd><p>Unlock the class</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>clear_caches</strong> – If True, disable the class’ caches and clear them</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoclass.MemoClass.unlocked">
+<code class="sig-name descname">unlocked</code><span class="sig-paren">(</span><em class="sig-param">clear_caches=True</em><span class="sig-paren">)</span></dt>
+<dd><p>A context manager that temporarily unlocks the class</p>
+<p>Does nothing if the class is already unlocked</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>clear_caches</strong> – If True, clear and disable the caches when unlocking</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="memoclass.memoclass.mutates">
+<code class="sig-prename descclassname">memoclass.memoclass.</code><code class="sig-name descname">mutates</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span></dt>
+<dd><p>Signal that a method mutates its class</p>
+<p>Here, mutates means that it clears the caches on any memomethods on the
+class calling the method</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-memoclass.memoize">
+<span id="memoclass-memoize-module"></span><h2>memoclass.memoize module</h2>
+<p>Basic decoarators for memoizing functions and methods</p>
+<dl class="class">
+<dt id="memoclass.memoize.LockMemoFunc">
+<em class="property">class </em><code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">LockMemoFunc</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">clear_on_unlock</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <a class="reference internal" href="#memoclass.memoize.MemoFunc" title="memoclass.memoize.MemoFunc"><code class="xref py py-class docutils literal notranslate"><span class="pre">memoclass.memoize.MemoFunc</span></code></a></p>
+<p>Used to memoize a bound function on a lockable class</p>
+<p>The bound function will lock its class before being called</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="memoclass.memoize.MemoClsMethod">
+<em class="property">class </em><code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">MemoClsMethod</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">cache_cls=&lt;class 'dict'&gt;</em>, <em class="sig-param">on_return=&lt;function MemoMethod.&lt;lambda&gt;&gt;</em>, <em class="sig-param">prehash=&lt;function _to_hashable&gt;</em>, <em class="sig-param">locks=True</em>, <em class="sig-param">clear_on_unlock=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <a class="reference internal" href="#memoclass.memoize.MemoMethod" title="memoclass.memoize.MemoMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">memoclass.memoize.MemoMethod</span></code></a></p>
+<p>Memoize a classmethod</p>
+<p>Memomethod/memofunc do not interact nicely with the classmethod
+decorator, so this should be used instead where a classmethod should be
+memoized</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="memoclass.memoize.MemoFunc">
+<em class="property">class </em><code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">MemoFunc</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">cache=None</em>, <em class="sig-param">on_return=&lt;function MemoFunc.&lt;lambda&gt;&gt;</em>, <em class="sig-param">prehash=&lt;function _to_hashable&gt;</em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Memoizes a free function</p>
+<dl class="method">
+<dt id="memoclass.memoize.MemoFunc.cache_enabled">
+<em class="property">property </em><code class="sig-name descname">cache_enabled</code></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoize.MemoFunc.clear_cache">
+<code class="sig-name descname">clear_cache</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Clear the cache</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoize.MemoFunc.disable_cache">
+<code class="sig-name descname">disable_cache</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoize.MemoFunc.enable_cache">
+<code class="sig-name descname">enable_cache</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="memoclass.memoize.MemoFunc.rm_from_cache">
+<code class="sig-name descname">rm_from_cache</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Remove the corresponding value from the cache</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="memoclass.memoize.MemoMethod">
+<em class="property">class </em><code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">MemoMethod</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">cache_cls=&lt;class 'dict'&gt;</em>, <em class="sig-param">on_return=&lt;function MemoMethod.&lt;lambda&gt;&gt;</em>, <em class="sig-param">prehash=&lt;function _to_hashable&gt;</em>, <em class="sig-param">locks=True</em>, <em class="sig-param">clear_on_unlock=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Memoizes a class’ method</p>
+<dl class="method">
+<dt id="memoclass.memoize.MemoMethod.clear_cache">
+<code class="sig-name descname">clear_cache</code><span class="sig-paren">(</span><em class="sig-param">bound=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Clear the cache</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>bound</strong> – If not None, clear only the cache corresponding to that object,
+if bound is None, remove all caches</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="memoclass.memoize.bind_callargs">
+<code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">bind_callargs</code><span class="sig-paren">(</span><em class="sig-param">sig</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Convert a set of args and kwargs into a dictionary of function arguments
+including defaults</p>
+<p>This is different to the result of signature.bind(<a href="#id1"><span class="problematic" id="id2">*</span></a>args,
+<a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs).arguments as it includes defaults. It’s different to
+inspect.getcallargs as it works properly on callables.
+It’s equivalent to</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">sig</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">apply_defaults</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">arguments</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>but the apply_defaults function is python3 only and not included in
+funcsigs</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="memoclass.memoize.make_decorator">
+<code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">make_decorator</code><span class="sig-paren">(</span><em class="sig-param">decorator</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="memoclass.memoize.memoclsmethod">
+<code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">memoclsmethod</code><span class="sig-paren">(</span><em class="sig-param">func=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="memoclass.memoize.memofunc">
+<code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">memofunc</code><span class="sig-paren">(</span><em class="sig-param">func=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="memoclass.memoize.memomethod">
+<code class="sig-prename descclassname">memoclass.memoize.</code><code class="sig-name descname">memomethod</code><span class="sig-paren">(</span><em class="sig-param">func=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-memoclass">
+<span id="module-contents"></span><h2>Module contents</h2>
+<p>A utility package for memoizing functions and class methods</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">memoclass</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">memoclass package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-memoclass.memoclass">memoclass.memoclass module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-memoclass.memoize">memoclass.memoize module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-memoclass">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">memoclass</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Jon Burr.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/memoclass.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
