@@ -3,6 +3,16 @@ name: PyTest
 on: [push]
 
 jobs:
+  print_version:
+    # Just a test, do we even have this bit right?
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${GITHUB_REF#refs/tags/}
+    steps:
+      - run: |
+          echo "Ref is ${GITHUB_REF}"
+          echo "getting version here gives ${GITHUB_REF#refs/tags/}"
+          echo "Version is ${VERSION}"
   set_version:
     # If this is a tag, then use it to update the version number
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
