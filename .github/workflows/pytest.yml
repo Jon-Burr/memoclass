@@ -11,6 +11,8 @@ jobs:
       GH_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
     steps: 
       - uses: actions/checkout@v2
+      - name: Force failure
+        run: false
       - name: Read version
         run: echo "::set-env name=VERSION::$( echo $GH_COMMIT_MESSAGE | sed -E 's/.*:tag-as:([^ ]+).*/\1/' )"
       - name: Change version
@@ -26,7 +28,7 @@ jobs:
           git push
   build:
     needs: set_version
-    if: always()
+    if: success() || cancelled()
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
