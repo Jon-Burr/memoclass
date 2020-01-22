@@ -6,23 +6,17 @@ from functools import wraps
 from contextlib import contextmanager
 from future.utils import iteritems
 
-def mutates(func, mutates_cls=False):
+def mutates(func):
     """ Signal that a method mutates its class
 
         Here, mutates means that it clears the caches on any memomethods on the
         class calling the method
-
-        :param mutates_cls:
-            If True, any class methods also have their caches cleared
     """
     @wraps(func)
     def inner(self, *args, **kwargs):
-        if self.is_locked:
-            raise ValueError(
-                    "Cannot call mutating method {0} on locked class {1}".format(
-                        func.__name__, self) )
-        self.clear_caches(clsmethods=mutates_cls)
-        return func(self, *args, **kwargs)
+        self.mutate()
+        return inner.__wrapped__(self, *args, **kwargs)
+    inner.__wrapped__ = func
     return inner
 
 class MemoClass(object):
@@ -56,8 +50,9 @@ class MemoClass(object):
             mutable_attrs = \
                     set(mutable_attrs) | set(("_locked", "_caches_enabled"))
         self._locked = False
-        self.enable_caches()
         self._mutable_attrs = mutable_attrs
+        self._memo_init = True
+        self.enable_caches()
 
     @memoclsmethod
     def _memomethods(cls, base=True, clsmethods=False):
@@ -71,27 +66,64 @@ class MemoClass(object):
                     subcls._memomethods(False, clsmethods)
                     for subcls in cls.mro() if issubclass(subcls, MemoClass)))
 
+    def mutates_with_this(self):
+        """ Return an iterable of objects whose mutate method should be called
+            when this one is
+        """
+        return ()
+
+    def mutate(self, _stack=None):
+        """ Signal that something has changed in this object
+
+            Raises a ValueError if this object is locked
+
+            Clears the caches on this object, then calls 'mutate' on anything
+            returned by self.mutates_with_this()
+        """
+        if not hasattr(self, "_memo_init"):
+            return
+        if self.is_locked:
+            raise ValueError("Cannot mutate locked object {0}".format(self) )
+        if _stack is None:
+            _stack = set()
+        elif id(self) in _stack:
+            # avoid infinite recursion
+            return
+        _stack.add(id(self) )
+        self.clear_caches()
+        for obj in self.mutates_with_this():
+            obj.mutate(_stack)
+
     def enable_caches(self, clsmethods=False):
         """ Enable the cache on all memomethods """
+        if not hasattr(self, "_memo_init"):
+            return
         self._caches_enabled = True
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).enable_cache()
 
     def disable_caches(self, clsmethods=False):
         """ Disable the cache on all memomethods """
+        if not hasattr(self, "_memo_init"):
+            return
         self._caches_enabled = False
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).disable_cache()
 
     def clear_caches(self, clsmethods=False):
         """ Clear the cache on all memomethods """
+        if not hasattr(self, "_memo_init"):
+            return
         for m in self._memomethods(clsmethods=clsmethods):
             getattr(self, m).clear_cache()
 
     @property
     def is_locked(self):
         """ Is this class locked """
-        return self._locked
+        if not hasattr(self, "_memo_init"):
+            return False
+        else:
+            return self._locked
 
     def lock(self):
         """ Lock the class
@@ -99,6 +131,10 @@ class MemoClass(object):
             A locked class' caches are always enabled and calling a mutating
             method on it results in a ValueError
         """
+        if not hasattr(self, "_memo_init"):
+            raise ValueError(
+                    "Cannot lock MemoClass before MemoClass.__init__" +
+                    "is finished!")
         self.enable_caches()
         self._locked = True
 
@@ -108,6 +144,10 @@ class MemoClass(object):
             :param clear_caches:
                 If True, disable the class' caches and clear them
         """
+        if not hasattr(self, "_memo_init"):
+            raise ValueError(
+                    "Cannot unlock MemoClass before MemoClass.__init__" +
+                    "is finished!")
         self._locked = False
         if clear_caches:
             self.disable_caches()
@@ -124,6 +164,10 @@ class MemoClass(object):
                 unlocking. The caches will only be cleared if the class was
                 unlocked before calling locked
         """
+        if not hasattr(self, "_memo_init"):
+            raise ValueError(
+                    "Cannot lock MemoClass before MemoClass.__init__" +
+                    "is finished!")
         if clear_on_unlock is None:
             # Clear and disable the caches when unlocking if they were disabled
             # before
@@ -144,6 +188,10 @@ class MemoClass(object):
             :param clear_caches:
                 If True, clear and disable the caches when unlocking
         """
+        if not hasattr(self, "_memo_init"):
+            raise ValueError(
+                    "Cannot unlock MemoClass before MemoClass.__init__" +
+                    "is finished!")
         if self.is_locked:
             self.unlock(clear_caches)
             yield
@@ -153,14 +201,17 @@ class MemoClass(object):
 
     def __setattr__(self, key, value):
         """ By default, setting an attribute on a class should mutate it """
-        if key == "_locked" or \
-           (hasattr(self, "_mutable_attrs") and (
-               self._mutable_attrs is None or key in self._mutable_attrs) ):
+        if not hasattr(self, "_memo_init"):
+            # If we haven't finished initialising the memoclass, the class acts
+            # like it's unlocked
             pass
-        elif hasattr(self, "_locked") and self.is_locked:
+        elif key == "_locked" or self._mutable_attrs is None or \
+                key in self._mutable_attrs:
+            pass
+        elif self.is_locked:
             raise ValueError(
                     "Cannot set attribute {0} on locked class {1}".format(
                         key, self) )
         else:
-            self.clear_caches()
+            self.mutate()
         return super(MemoClass, self).__setattr__(key, value)

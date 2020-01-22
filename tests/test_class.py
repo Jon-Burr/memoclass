@@ -17,7 +17,7 @@ class PartialSum(MemoClass):
         return self.stored + other
 
     @mutates
-    def mutate(self):
+    def do_mutate(self):
         pass
 
     @classmethod
@@ -52,7 +52,7 @@ def test_mutate():
     a.stored = 3
     assert a(3) == 6
     assert a.call_count == 2
-    a.mutate()
+    a.do_mutate()
     assert a(3) == 6
     assert a.call_count == 3
 
