@@ -23,6 +23,15 @@ def join_list(head, tail=[1, 2, 3]):
     """ Join two lists """
     return head + tail
 
+@memofunc
+def prod_args(*args, **kwargs):
+    """ Silly little function that just returns its arguments
+
+        This is to test that memoising a function including *args and **kwargs
+        works
+    """
+    return (args, kwargs)
+
 def reset():
     global factorial_count
     factorial_count = 0
@@ -83,3 +92,9 @@ def test_defaults():
     a = join_list([0])
     b = join_list([0], [1, 2, 3])
     assert a is b
+
+def test_prod_args():
+    """ Test the prod_args function """
+    res = prod_args(1, 2, 'a', k1="Hello", k2="World")
+    assert prod_args(1, 2, 'a', k2="World", k1="Hello") is res
+    assert prod_args(1, 2, 'a') is not res
