@@ -21,9 +21,12 @@ jobs:
         run: |
           git config --global user.name "Jon Burr"
           git config --global user.email "jon.burr.gh@gmail.com"
-          git commit -am "Update version number to match tag"
+          git commit -am "AUTOCOMMIT: Update version number to ${VERSION}"
+          git tag -a ${VERSION} -m "Auto-tagging version ${VERSION}"
           git push
   build:
+
+    needs: set_version
 
     runs-on: ubuntu-latest
     strategy:
