@@ -7,11 +7,11 @@ jobs:
     # Just a test, do we even have this bit right?
     runs-on: ubuntu-latest
     env:
-      VERSION: ${GITHUB_REF#refs/tags/}
+      VERSION: $( echo ${GITHUB_REF#refs/} )
     steps:
       - run: |
           echo "Ref is ${GITHUB_REF}"
-          echo "getting version here gives ${GITHUB_REF#refs/tags/}"
+          echo "getting version here gives ${GITHUB_REF#refs/}"
           echo "Version is ${VERSION}"
   set_version:
     # If this is a tag, then use it to update the version number
