@@ -25,9 +25,8 @@ jobs:
           git tag -a ${VERSION} -m "Auto-tagging version ${VERSION}"
           git push
   build:
-
     needs: set_version
-
+    if: always()
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
