@@ -12,7 +12,7 @@ jobs:
     steps: 
       - uses: actions/checkout@v1
       - name: Change version
-      - run: |
+        run: |
           sed -i -E 's/__version__=".+"/__version__="'${VERSION}'"/' src/memoclass/__init__.py
           sed -i -E 's/version=".+"/version="'${VERSION}'"/' setup.py
   build:
