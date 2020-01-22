@@ -11,7 +11,7 @@ with open(path.join(this_directory, 'README.rst') ) as f:
 
 setup(
     name="memoclass",
-    version="0.2.0",
+    version="0.2.0a",
     packages=find_packages('src'),
     package_dir={'':'src'},
     license="MIT",
