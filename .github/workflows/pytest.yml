@@ -6,9 +6,9 @@ jobs:
   print_version:
     # Just a test, do we even have this bit right?
     runs-on: ubuntu-latest
-    env:
-      VERSION: $( echo ${GITHUB_REF#refs/} )
     steps:
+      - name: Set var
+        run: echo "::set-env name=VERSION::$( echo ${GITHUB_REF#refs/} )"
       - run: |
           echo "Ref is ${GITHUB_REF}"
           echo "getting version here gives ${GITHUB_REF#refs/}"
@@ -18,7 +18,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     runs-on: ubuntu-latest
     env:
-      VERSION: ${GITHUB_REF#refs/tags/}
+      VERSION: ${{GITHUB_REF:10}}
     steps: 
       - uses: actions/checkout@v1
       - name: Change version
