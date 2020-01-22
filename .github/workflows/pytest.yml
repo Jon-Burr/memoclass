@@ -17,8 +17,6 @@ jobs:
     # If this is a tag, then use it to update the version number
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     runs-on: ubuntu-latest
-    env:
-      VERSION: ${{GITHUB_REF:10}}
     steps: 
       - uses: actions/checkout@v1
       - name: Change version
