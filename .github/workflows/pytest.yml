@@ -4,13 +4,15 @@ on: [push]
 
 jobs:
   set_version:
-    # If this is a tag, then use it to update the version number
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+    # If the head commit message contains the string ':tag-as:<TAG>'
+    if: contains( github.event.head_commit.message, ":tag-as:")
     runs-on: ubuntu-latest
+    env:
+      GH_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
     steps: 
       - uses: actions/checkout@v2
       - name: Read version
-        run: echo "::set-env name=VERSION::$( echo ${GITHUB_REF#refs/tags/} )"
+        run: echo "::set-env name=VERSION::$( echo $GH_COMMIT_MESSAGE | sed -E 's/.*:tag-as:([^ ]+).*/\1/' )"
       - name: Change version
         run: |
           sed -i -E 's/__version__=".+"/__version__="'${VERSION}'"/' src/memoclass/__init__.py
