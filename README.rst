@@ -8,6 +8,8 @@ A utility package for memoizing functions and class methods
 .. role:: python(code)
     :language: python
 
+.. image:: https://github.com/Jon-Burr/memoclass/workflows/PyTest/badge.svg
+
 Introduction
 ============
 
