@@ -72,7 +72,7 @@ def bind_callargs(sig, *args, **kwargs):
             elif parameter.kind == Parameter.VAR_POSITIONAL:
                 # The default for varargs is an empty tuple
                 callargs[name] = ()
-            elif paramter.kind == Parameter.VAR_KEYWORD:
+            elif parameter.kind == Parameter.VAR_KEYWORD:
                 # The default for varkwargs is an empty dict
                 callargs[name] = {}
             else:
